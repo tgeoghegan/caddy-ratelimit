@@ -180,6 +180,7 @@ func (h Handler) distributedRateLimiting(w http.ResponseWriter, repl *caddy.Repl
 	window := limiter.Window()
 
 	var totalCount int
+	var dawnOfTime time.Time
 	oldestEvent := limiter.OldestEvent()
 
 	h.Distributed.otherStatesMu.RLock()
@@ -195,7 +196,9 @@ func (h Handler) distributedRateLimiting(w http.ResponseWriter, repl *caddy.Repl
 		if zone, ok := otherInstanceState.Zones[zoneName]; ok {
 			// TODO: could probably skew the numbers here based on timestamp and window... perhaps try to predict a better updated count
 			totalCount += zone[rlKey].Count
-			h.logger.Info("peer oldest event", zap.Time("oldest event", zone[rlKey].OldestEvent))
+			if zone[rlKey].OldestEvent != dawnOfTime {
+				h.logger.Info("peer oldest event", zap.Time("oldest event", zone[rlKey].OldestEvent))
+			}
 			if zone[rlKey].OldestEvent.Before(oldestEvent) && zone[rlKey].OldestEvent.After(now().Add(-window)) {
 				h.logger.Info("updating peer oldest event", zap.Time("oldest event", zone[rlKey].OldestEvent))
 				oldestEvent = zone[rlKey].OldestEvent

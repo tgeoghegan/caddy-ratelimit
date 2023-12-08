@@ -173,11 +173,13 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhtt
 		// pool...
 		limiter := ringBufPool.Get().(*ringBufferRateLimiter)
 		if val, loaded := rl.limiters.LoadOrStore(key, limiter); loaded {
+			h.logger.Info("using existing limiter instance")
 			ringBufPool.Put(limiter) // didn't use; save for next time
 			limiter = val.(*ringBufferRateLimiter)
 		} else {
 			// as another side-effect of sync.Map's bad API, avoid all the
 			// work of initializing the ring buffer unless we have to
+			h.logger.Info("initializing a new limiter")
 			limiter.initialize(rl.MaxEvents, time.Duration(rl.Window))
 		}
 
