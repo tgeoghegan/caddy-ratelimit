@@ -100,10 +100,15 @@ func (h Handler) syncDistributedWrite(ctx context.Context) error {
 			}
 			rl := value.(*ringBufferRateLimiter)
 
-			state.Zones[zoneNameStr][key.(string)] = rlStateValue{
+			stateValue := rlStateValue{
 				Count:       rl.Count(state.Timestamp),
 				OldestEvent: rl.OldestEvent(),
 			}
+			h.logger.Info("syncing rate limit state",
+				zap.Time("oldest event", stateValue.OldestEvent),
+				zap.Int("count", stateValue.Count),
+			)
+			state.Zones[zoneNameStr][key.(string)] = stateValue
 
 			return true
 		})
