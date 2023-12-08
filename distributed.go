@@ -195,12 +195,15 @@ func (h Handler) distributedRateLimiting(w http.ResponseWriter, repl *caddy.Repl
 		if zone, ok := otherInstanceState.Zones[zoneName]; ok {
 			// TODO: could probably skew the numbers here based on timestamp and window... perhaps try to predict a better updated count
 			totalCount += zone[rlKey].Count
+			h.logger.Info("peer oldest event", zap.Time("oldest event", zone[rlKey].OldestEvent))
 			if zone[rlKey].OldestEvent.Before(oldestEvent) && zone[rlKey].OldestEvent.After(now().Add(-window)) {
+				h.logger.Info("updating peer oldest event", zap.Time("oldest event", zone[rlKey].OldestEvent))
 				oldestEvent = zone[rlKey].OldestEvent
 			}
 
 			// no point in counting more if we're already over
 			if totalCount >= maxAllowed {
+				h.logger.Info("rate limitng request due to peer usage", zap.Time("oldest event", zone[rlKey].OldestEvent))
 				return h.rateLimitExceeded(w, repl, zoneName, time.Until(oldestEvent.Add(window)))
 			}
 		}
@@ -219,6 +222,7 @@ func (h Handler) distributedRateLimiting(w http.ResponseWriter, repl *caddy.Repl
 	limiter.mu.Unlock()
 
 	// otherwise, it appears limit has been exceeded
+	h.logger.Info("rate limitng request due to local usage", zap.Time("oldest event", oldestEvent))
 	return h.rateLimitExceeded(w, repl, zoneName, time.Until(oldestEvent.Add(window)))
 }
 
