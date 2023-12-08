@@ -100,15 +100,15 @@ func (h Handler) syncDistributedWrite(ctx context.Context) error {
 			}
 			rl := value.(*ringBufferRateLimiter)
 
-			stateValue := rlStateValue{
-				Count:       rl.Count(state.Timestamp),
-				OldestEvent: rl.OldestEvent(),
-			}
+			count, oldestEvent := rl.Count(state.Timestamp)
 			h.logger.Info("syncing rate limit state",
-				zap.Time("oldest event", stateValue.OldestEvent),
-				zap.Int("count", stateValue.Count),
+				zap.Time("oldest event", oldestEvent),
+				zap.Int("count", count),
 			)
-			state.Zones[zoneNameStr][key.(string)] = stateValue
+			state.Zones[zoneNameStr][key.(string)] = rlStateValue{
+				Count:       count,
+				OldestEvent: oldestEvent,
+			}
 
 			return true
 		})
@@ -186,7 +186,7 @@ func (h Handler) distributedRateLimiting(w http.ResponseWriter, repl *caddy.Repl
 
 	var totalCount int
 	var dawnOfTime time.Time
-	oldestEvent := limiter.OldestEvent()
+	oldestEvent := time.Now()
 
 	h.Distributed.otherStatesMu.RLock()
 	defer h.Distributed.otherStatesMu.RUnlock()
@@ -221,7 +221,11 @@ func (h Handler) distributedRateLimiting(w http.ResponseWriter, repl *caddy.Repl
 	// so the critical section over this limiter's lock is smaller), and make the
 	// reservation if we're within the limit
 	limiter.mu.Lock()
-	totalCount += limiter.countUnsynced(now())
+	count, oldestLocalEvent := limiter.countUnsynced(now())
+	totalCount += count
+	if oldestLocalEvent.Before(oldestEvent) && oldestLocalEvent.After(now().Add(-window)) {
+		oldestEvent = oldestLocalEvent
+	}
 	if totalCount < maxAllowed {
 		limiter.reserve()
 		limiter.mu.Unlock()
