@@ -195,7 +195,7 @@ func (h Handler) distributedRateLimiting(w http.ResponseWriter, repl *caddy.Repl
 		if zone, ok := otherInstanceState.Zones[zoneName]; ok {
 			// TODO: could probably skew the numbers here based on timestamp and window... perhaps try to predict a better updated count
 			totalCount += zone[rlKey].Count
-			if zone[rlKey].OldestEvent.Before(oldestEvent) {
+			if zone[rlKey].OldestEvent.Before(oldestEvent) && zone[rlKey].OldestEvent.After(now().Add(-window)) {
 				oldestEvent = zone[rlKey].OldestEvent
 			}
 
