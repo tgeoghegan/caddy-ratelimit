@@ -64,7 +64,7 @@ func TestRateLimits(t *testing.T) {
 	"apps": {
 		"http": {
 			"servers": {
-				"demo": {
+				"server": {
 					"listen": [":8080"],
 					"routes": [{
 						"handle": [
@@ -123,7 +123,7 @@ func TestDistinctZonesAndKeys(t *testing.T) {
 	"apps": {
 		"http": {
 			"servers": {
-				"demo": {
+				"server": {
 					"listen": [":8080"],
 					"routes": [{
 						"handle": [
