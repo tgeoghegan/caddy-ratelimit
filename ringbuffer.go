@@ -15,6 +15,7 @@
 package caddyrl
 
 import (
+	"fmt"
 	"sync"
 	"time"
 )
@@ -197,6 +198,7 @@ func (r *ringBufferRateLimiter) countUnsynced(ref time.Time) (int, time.Time) {
 		// modulus the ring length to wrap around if necessary
 		i := (r.cursor + (len(r.ring) - eventsInWindow - 1)) % len(r.ring)
 		if r.ring[i].Before(beginningOfWindow) {
+			fmt.Printf("self %p cursor: %d eventsInWindow: %d i: %d ring len: %d\n", r, r.cursor, eventsInWindow, i, len(r.ring))
 			return eventsInWindow, r.ring[i-1]
 		}
 	}

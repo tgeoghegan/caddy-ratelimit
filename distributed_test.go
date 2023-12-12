@@ -40,7 +40,7 @@ func TestDistributed(t *testing.T) {
 	}{
 		// Request should be refused because a peer used up the rate limit
 		{
-			name:               "peer-usage-in-window",
+			name:               "peer-usage-in-windows",
 			peerRequests:       maxEvents,
 			peerStateTimeStamp: now(),
 			localRequests:      0,
