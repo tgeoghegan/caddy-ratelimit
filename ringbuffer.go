@@ -172,8 +172,9 @@ func (r *ringBufferRateLimiter) SetWindow(window time.Duration) {
 	r.mu.Unlock()
 }
 
-// Count counts how many events are in the window from the reference time and returns that value and
-// the oldest event in the window.
+// Count counts how many events are in the window from the reference time and
+// returns that value and the oldest event in the buffer (the zero value of
+// time.Time if there are no events in the window).
 func (r *ringBufferRateLimiter) Count(ref time.Time) (int, time.Time) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -184,6 +185,7 @@ func (r *ringBufferRateLimiter) Count(ref time.Time) (int, time.Time) {
 // It is NOT safe to use without a lock on r.mu.
 // TODO: this is currently O(n) but could probably become O(log n) if we switch to some weird, custom binary search modulo ring length around the cursor.
 func (r *ringBufferRateLimiter) countUnsynced(ref time.Time) (int, time.Time) {
+	var zeroTime time.Time
 	beginningOfWindow := ref.Add(-r.window)
 
 	// This loop is a little gnarly, I know. We start at one before the cursor because that's
@@ -199,11 +201,16 @@ func (r *ringBufferRateLimiter) countUnsynced(ref time.Time) (int, time.Time) {
 		i := (r.cursor + (len(r.ring) - eventsInWindow - 1)) % len(r.ring)
 		if r.ring[i].Before(beginningOfWindow) {
 			fmt.Printf("self %p cursor: %d eventsInWindow: %d i: %d ring len: %d\n", r, r.cursor, eventsInWindow, i, len(r.ring))
-			return eventsInWindow, r.ring[i-1]
+			if eventsInWindow == 0 {
+				return eventsInWindow, zeroTime
+			} else {
+				return eventsInWindow, r.ring[(i+1)%len(r.ring)]
+			}
 		}
 	}
 
 	// if we looped the entire ring, all events are within the window
+	fmt.Printf("all events in window\n")
 	return len(r.ring), r.ring[r.cursor]
 }
 
